@@ -2,7 +2,10 @@ import { createClientRecord } from '../actions'
 
 export default function NewClientPage() {
   return (
-    <form action={createClientRecord} className="p-6 max-w-md space-y-4">
+    <form action={async (formData: FormData) => {
+      'use server'
+      await createClientRecord(formData)
+    }} className="p-6 max-w-md space-y-4">
       <h1 className="text-xl font-semibold">New client</h1>
       <input name="name" placeholder="Full name" className="w-full border p-2" required />
       <input name="phone" placeholder="Phone" className="w-full border p-2" />
