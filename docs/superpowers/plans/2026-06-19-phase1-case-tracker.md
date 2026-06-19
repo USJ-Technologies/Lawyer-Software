@@ -4,12 +4,13 @@
 
 **Goal:** Ship a Next.js PWA + Supabase app where a solo litigator manages clients/cases/hearings, never misses a hearing date (manual entry + optional CNR auto-sync), and sees a Today/This week/Overdue dashboard.
 
-**Architecture:** Next.js 14 App Router (TypeScript) talking directly to Supabase (Postgres + Auth + Storage) from server components/actions using the `@supabase/ssr` client. All multi-tenancy is enforced by Postgres Row-Level Security keyed on `chamber_id` — the app never needs its own authorization layer. Two Supabase Edge Functions (`cnr-sync`, `send-reminders`) run on cron and talk to Postgres via the service-role key. The CNR vendor sits behind a `CnrProvider` TypeScript interface so the Edge Function never calls a vendor SDK directly.
+**Architecture:** Next.js 15+ App Router (TypeScript) talking directly to Supabase (Postgres + Auth + Storage) from server components/actions using the `@supabase/ssr` client. All multi-tenancy is enforced by Postgres Row-Level Security keyed on `chamber_id` — the app never needs its own authorization layer. Two Supabase Edge Functions (`cnr-sync`, `send-reminders`) run on cron and talk to Postgres via the service-role key. The CNR vendor sits behind a `CnrProvider` TypeScript interface so the Edge Function never calls a vendor SDK directly.
 
-**Tech Stack:** Next.js 14 (App Router, TypeScript), Tailwind CSS, `@supabase/ssr` + `@supabase/supabase-js`, Supabase Postgres/Auth/Storage/Edge Functions, Vitest for unit tests, `next-pwa`-free hand-rolled manifest + service worker (no extra dependency needed for Phase 1's push scope).
+**Tech Stack:** Next.js 15+ (App Router, TypeScript) — every task below uses the async `cookies()`/`params` APIs introduced in Next.js 15, so the installed version must be 15 or later (Task 1 installed 16.2.9, which satisfies this). Tailwind CSS, `@supabase/ssr` + `@supabase/supabase-js`, Supabase Postgres/Auth/Storage/Edge Functions, Vitest for unit tests, `next-pwa`-free hand-rolled manifest + service worker (no extra dependency needed for Phase 1's push scope).
 
 ## Global Constraints
 
+- Next.js version must be 15 or later (async `cookies()`/`params` APIs are used throughout — see Tasks 6 and 10). The plan originally said "Next.js 14" in error; corrected after Task 1's review caught the mismatch between that line and the async API calls already written into later tasks.
 - Every table that holds tenant data carries `chamber_id uuid not null references chamber(id)` and has RLS enabled — no table is exempt (spec §4, §7).
 - `hearing.source` is `'manual' | 'cnr_sync'`; auto-sync must never overwrite a row where `source = 'manual'` (spec §6).
 - Every CNR provider call is logged to `cnr_sync_log` regardless of outcome (spec §6).
