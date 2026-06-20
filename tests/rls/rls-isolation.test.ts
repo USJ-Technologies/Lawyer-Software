@@ -3,56 +3,10 @@ process.loadEnvFile('.env.local')
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { createClient } from '@supabase/supabase-js'
 import { Client as PgClient } from 'pg'
-import bcrypt from 'bcryptjs'
-import { randomUUID } from 'crypto'
+import { signUpAndSetupChamber, cleanupChamberAndUser } from '../helpers/testAuth'
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 // Same pooler connection string pattern used by .superpowers/sdd/run-migrations.js
 const pgConnectionString = process.env.SUPABASE_DB_URL!
-
-async function createConfirmedUser(pg: InstanceType<typeof PgClient>, email: string, password: string) {
-  const userId = randomUUID()
-  const encryptedPassword = bcrypt.hashSync(password, 10)
-  await pg.query(
-    `insert into auth.users (
-      id, instance_id, aud, role, email, encrypted_password,
-      email_confirmed_at, created_at, updated_at,
-      raw_app_meta_data, raw_user_meta_data,
-      confirmation_token, recovery_token, email_change_token_new,
-      email_change, phone_change, email_change_token_current, reauthentication_token
-    ) values (
-      $1, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', $2, $3,
-      now(), now(), now(),
-      '{"provider":"email","providers":["email"]}', '{}',
-      '', '', '', '', '', '', ''
-    )`,
-    [userId, email, encryptedPassword]
-  )
-  await pg.query(
-    `insert into auth.identities (
-      id, user_id, provider_id, provider, identity_data, created_at, updated_at, last_sign_in_at
-    ) values ($1, $2::uuid, $2::text, 'email', $3, now(), now(), now())`,
-    [randomUUID(), userId, JSON.stringify({ sub: userId, email })]
-  )
-  return userId
-}
-
-async function signUpAndSetupChamber(pg: InstanceType<typeof PgClient>, email: string, chamberName: string) {
-  const password = 'Test1234!'
-  const userId = await createConfirmedUser(pg, email, password)
-
-  const supabase = createClient(url, anonKey)
-  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-  if (signInError) throw signInError
-
-  const { data: rpcResult, error: rpcError } = await supabase
-    .rpc('create_chamber_and_profile', { p_chamber_name: chamberName })
-    .single()
-  if (rpcError || !rpcResult) throw rpcError ?? new Error('chamber/profile bootstrap failed')
-
-  return { supabase, chamberId: (rpcResult as { chamber_id: string }).chamber_id, userId }
-}
 
 describe('RLS chamber isolation', () => {
   let pg: InstanceType<typeof PgClient>
@@ -61,6 +15,8 @@ describe('RLS chamber isolation', () => {
   let clientAId: string
   let userAId: string
   let userBId: string
+  let chamberAId: string
+  let chamberBId: string
 
   beforeAll(async () => {
     pg = new PgClient({ connectionString: pgConnectionString })
@@ -74,6 +30,8 @@ describe('RLS chamber isolation', () => {
     chamberB = b.supabase
     userAId = a.userId
     userBId = b.userId
+    chamberAId = a.chamberId
+    chamberBId = b.chamberId
 
     const { data: clientRow } = await chamberA
       .from('client')
@@ -86,10 +44,11 @@ describe('RLS chamber isolation', () => {
   afterAll(async () => {
     await chamberA.auth.signOut()
     await chamberB.auth.signOut()
-    // Deleting auth.users cascades to profile/chamber/client via the FK chain
-    // established in 0001/0003 migrations — keeps the live DB from accumulating
-    // a new throwaway chamber/user pair on every test run indefinitely.
-    await pg.query('delete from auth.users where id = any($1::uuid[])', [[userAId, userBId]])
+    // Deleting auth.users only cascades to `profile` (its direct child); `chamber` is profile's
+    // *parent* so it is never reached and is left orphaned along with everything chamber-scoped
+    // underneath it (client, case, hearing, reminder, ...) — see cleanupChamberAndUser for why.
+    await cleanupChamberAndUser(pg, chamberAId, [userAId])
+    await cleanupChamberAndUser(pg, chamberBId, [userBId])
     await pg.end()
   })
 
