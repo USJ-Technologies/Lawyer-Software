@@ -10,5 +10,10 @@ export function DocumentUpload({ caseId, chamberId }: { caseId: string; chamberI
     await uploadDocument(caseId, chamberId, file)
     router.refresh()
   }
-  return <input type="file" onChange={handleChange} />
+  return (
+    <label className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-seal cursor-pointer hover:underline">
+      + Upload document
+      <input type="file" onChange={handleChange} className="sr-only" />
+    </label>
+  )
 }

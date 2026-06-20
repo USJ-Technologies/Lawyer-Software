@@ -9,10 +9,20 @@ export function OutcomeForm({ hearingId }: { hearingId: string }) {
     if (!result.error) router.refresh()
   }
   return (
-    <form action={handleSubmit} className="flex gap-2 mt-1">
-      <input name="outcome" placeholder="Outcome" className="border p-1 text-sm" />
-      <input name="next_action" placeholder="Next action" className="border p-1 text-sm" />
-      <button type="submit" className="text-sm underline">Save</button>
+    <form action={handleSubmit} className="flex gap-3 mt-2 items-baseline">
+      <input
+        name="outcome"
+        placeholder="Outcome"
+        className="field-input text-sm flex-1"
+      />
+      <input
+        name="next_action"
+        placeholder="Next action"
+        className="field-input text-sm flex-1"
+      />
+      <button type="submit" className="text-xs font-mono uppercase tracking-wide text-seal hover:underline">
+        Save
+      </button>
     </form>
   )
 }

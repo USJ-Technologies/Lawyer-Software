@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { classifyHearing } from '@/lib/dates/buckets'
 import { HearingBucketList } from '@/components/HearingBucketList'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -20,14 +21,16 @@ export default async function DashboardPage() {
     bucket: classifyHearing(h.date),
   }))
 
+  const nothingDue = rows.every((r) => r.bucket !== 'overdue' && r.bucket !== 'today' && r.bucket !== 'this_week')
+
   return (
-    <div className="p-6">
-      <h1 className="text-xl font-semibold mb-6">Dashboard</h1>
-      <HearingBucketList title="Overdue" rows={rows.filter((r) => r.bucket === 'overdue')} />
-      <HearingBucketList title="Today" rows={rows.filter((r) => r.bucket === 'today')} />
-      <HearingBucketList title="This week" rows={rows.filter((r) => r.bucket === 'this_week')} />
-      {rows.every((r) => r.bucket !== 'overdue' && r.bucket !== 'today' && r.bucket !== 'this_week') && (
-        <p className="text-gray-500">Nothing due in the next 7 days.</p>
+    <div>
+      <PageHeader eyebrow="Daily register" title="What's due" />
+      <HearingBucketList title="Overdue" tone="seal" rows={rows.filter((r) => r.bucket === 'overdue')} />
+      <HearingBucketList title="Today" tone="brass" rows={rows.filter((r) => r.bucket === 'today')} />
+      <HearingBucketList title="This week" tone="ink" rows={rows.filter((r) => r.bucket === 'this_week')} />
+      {nothingDue && (
+        <p className="text-ink-soft border-t border-rule pt-6">Nothing due in the next 7 days.</p>
       )}
     </div>
   )

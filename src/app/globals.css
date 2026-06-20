@@ -1,26 +1,78 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/*
+ * Smart Vakeel design tokens — a case-register / daybook aesthetic,
+ * not a generic SaaS palette. "Seal" is the single accent (the red ink
+ * Indian court clerks use for noting orders); "brass" is reserved for
+ * the stamp signature only, never for interactive elements.
+ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-paper: #efeae0;
+  --color-paper-deep: #e6dfd0;
+  --color-ink: #1c1b19;
+  --color-ink-soft: #6b6457;
+  --color-rule: #c9bfa8;
+  --color-seal: #8c2f23;
+  --color-seal-soft: #b65b4c;
+  --color-brass: #9c7a3c;
+  --color-court-green: #2f4538;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Underlined ledger-style field — used instead of boxed inputs throughout. */
+.field-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-rule);
+  padding: 0.5rem 0.125rem;
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  transition: border-color 150ms ease;
+}
+.field-input::placeholder {
+  color: var(--color-ink-soft);
+  opacity: 0.6;
+}
+.field-input:focus {
+  outline: none;
+  border-bottom-color: var(--color-seal);
+}
+.field-input:focus-visible {
+  outline: 2px solid var(--color-seal);
+  outline-offset: 2px;
+  border-radius: 1px;
+}
+
+/* The ink-stamp signature element. Rotated, slightly irregular, never sharp. */
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+  padding: 0.3rem 0.7rem;
+  transform: rotate(-7deg);
+  opacity: 0.85;
+  user-select: none;
 }
