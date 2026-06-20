@@ -28,6 +28,10 @@ function filenameFromPath(path: string): string {
   return last.replace(/^\d+-/, '')
 }
 
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
 export function DocumentList({
   documents,
   selectedId,
@@ -82,6 +86,7 @@ export function DocumentList({
                   {d.label || filenameFromPath(d.storage_ref)}
                 </button>
                 <div className="flex items-baseline gap-3 whitespace-nowrap">
+                  <span className="text-xs font-mono text-ink-soft">{formatDate(d.created_at)}</span>
                   <span className="text-xs font-mono text-ink-soft">{formatSize(d.size_bytes)}</span>
                   <button
                     type="button"
