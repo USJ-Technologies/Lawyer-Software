@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { addNote } from '../actions'
 import { HearingForm } from '@/components/HearingForm'
 import { OutcomeForm } from '@/components/OutcomeForm'
-import { DocumentUpload } from '@/components/DocumentUpload'
+import { DocumentManager } from '@/components/DocumentManager'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Stamp } from '@/components/ui/Stamp'
 import { Button } from '@/components/ui/Button'
@@ -14,7 +14,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   const [{ data: caseRow }, { data: hearings }, { data: documents }, { data: notes }] = await Promise.all([
     supabase.from('case').select('id, title, chamber_id, cnr, sync_enabled, client:client_id(name)').eq('id', id).single(),
     supabase.from('hearing').select('id, date, purpose, source, outcome, next_action').eq('case_id', id).order('date'),
-    supabase.from('document').select('id, label, storage_ref').eq('case_id', id),
+    supabase.from('document').select('id, label, storage_ref, category, mime_type, size_bytes, created_at').eq('case_id', id),
     supabase.from('note').select('id, body, created_at').eq('case_id', id).order('created_at', { ascending: false }),
   ])
 
@@ -72,16 +72,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
 
       <section>
         <h2 className="font-display text-xl mb-3">Documents</h2>
-        {(documents ?? []).length > 0 && (
-          <ul className="divide-y divide-rule border-t border-rule mb-3">
-            {(documents ?? []).map((d) => (
-              <li key={d.id} className="py-2 text-sm">
-                {d.label}
-              </li>
-            ))}
-          </ul>
-        )}
-        <DocumentUpload caseId={id} chamberId={caseRow.chamber_id} />
+        <DocumentManager caseId={id} chamberId={caseRow.chamber_id} documents={documents ?? []} />
       </section>
 
       <section>
