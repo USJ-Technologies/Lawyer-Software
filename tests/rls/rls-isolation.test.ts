@@ -40,7 +40,7 @@ async function createConfirmedUser(pg: InstanceType<typeof PgClient>, email: str
 
 async function signUpAndSetupChamber(pg: InstanceType<typeof PgClient>, email: string, chamberName: string) {
   const password = 'Test1234!'
-  await createConfirmedUser(pg, email, password)
+  const userId = await createConfirmedUser(pg, email, password)
 
   const supabase = createClient(url, anonKey)
   const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
@@ -51,7 +51,7 @@ async function signUpAndSetupChamber(pg: InstanceType<typeof PgClient>, email: s
     .single()
   if (rpcError || !rpcResult) throw rpcError ?? new Error('chamber/profile bootstrap failed')
 
-  return { supabase, chamberId: (rpcResult as { chamber_id: string }).chamber_id }
+  return { supabase, chamberId: (rpcResult as { chamber_id: string }).chamber_id, userId }
 }
 
 describe('RLS chamber isolation', () => {
@@ -59,6 +59,8 @@ describe('RLS chamber isolation', () => {
   let chamberA: ReturnType<typeof createClient>
   let chamberB: ReturnType<typeof createClient>
   let clientAId: string
+  let userAId: string
+  let userBId: string
 
   beforeAll(async () => {
     pg = new PgClient({ connectionString: pgConnectionString })
@@ -70,6 +72,8 @@ describe('RLS chamber isolation', () => {
     const b = await signUpAndSetupChamber(pg, `rls-test-b-${stamp}@gmail.com`, 'Chamber B')
     chamberA = a.supabase
     chamberB = b.supabase
+    userAId = a.userId
+    userBId = b.userId
 
     const { data: clientRow } = await chamberA
       .from('client')
@@ -82,6 +86,10 @@ describe('RLS chamber isolation', () => {
   afterAll(async () => {
     await chamberA.auth.signOut()
     await chamberB.auth.signOut()
+    // Deleting auth.users cascades to profile/chamber/client via the FK chain
+    // established in 0001/0003 migrations — keeps the live DB from accumulating
+    // a new throwaway chamber/user pair on every test run indefinitely.
+    await pg.query('delete from auth.users where id = any($1::uuid[])', [[userAId, userBId]])
     await pg.end()
   })
 
